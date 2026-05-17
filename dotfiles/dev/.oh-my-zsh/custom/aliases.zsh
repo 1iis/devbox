@@ -2,8 +2,14 @@
 # Aliases [all users]                                                    BEGIN
 # ============================================================================
 
-# Who and where am I?
-alias '?@?'='echo -e "$(whoami)@$(hostname):$(pwd)" | grep $USER'
+# Who and where am I? (colors: blue=dev@host mint=dev@ctn none=other)
+alias '?@?'='if [ "$HOST" = "dev" ]; then \
+    echo -e "\033[38;5;49m$(whoami)@$(hostname):$(pwd)\033[0m"; \
+  elif [ "$USER" = "dev" ]; then \
+    echo -e "\033[1;36m$(whoami)@$(hostname):$(pwd)\033[0m"; \
+  else \
+    echo -e "$(whoami)@$(hostname):$(pwd)"; \
+  fi'
 
 # ============================================================================
 # Shell things
