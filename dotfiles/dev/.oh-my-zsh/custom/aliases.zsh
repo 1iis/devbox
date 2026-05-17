@@ -1,0 +1,60 @@
+# ============================================================================
+# Aliases [all users]                                                    BEGIN
+# ============================================================================
+
+# Who and where am I?
+alias '?@?'='echo -e "$(whoami)@$(hostname):$(pwd)" | grep $USER'
+
+# ============================================================================
+# Shell things
+
+# Fix Ubuntu
+alias fd=fdfind
+command -v batcat >/dev/null 2>&1 && alias bat=batcat
+
+# 1-char
+alias l='ls -FLlAsh'
+alias c='cat '
+alias b='batcat '
+alias e='nano --softwrap --atblanks --constantshow --autoindent --linenumbers '
+alias E='sudo nano --softwrap --atblanks --constantshow --autoindent --linenumbers '
+alias ','='clear'
+alias ',,'='clear && ?@? && l '
+
+# Paths
+alias ',g'='cd ~/git'
+alias ',p'='cd ~/pj'
+
+# auto-verbosity
+alias 'mv'='mv -v '
+alias 'mv-base'='mv '
+alias 'cp'='cp -v '
+alias 'cp-base'='cp '
+alias 'rm'='rm -v '
+alias 'rm-base'='rm '
+alias 'mk'='mkdir -v '
+alias 'rmdir'='rmdir -v '
+alias 'rmdir-base'='rmdir '
+
+# quick edit this
+alias 'rc'="e $HOME/.zshrc"
+alias '__'="e /home/dev/.oh-my-zsh/custom/aliases.zsh"
+alias '___'="e $ZSH_CUSTOM/$USER.zsh"
+alias 'rel'="source ~/.zshrc"
+
+# eye-candy
+alias 'lf'="echo '\n\n'"
+alias 'sep'="echo '\n\n\n____________\n\n'"
+
+# ============================================================================
+# Utils
+alias 'ipget'='curl -4 ipget.io'
+
+# ============================================================================
+# SSH
+# kitty
+alias kssh='kitty +kitten ssh '
+
+# ============================================================================
+# END                                                                  Aliases
+# ============================================================================
