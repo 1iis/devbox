@@ -1,5 +1,5 @@
 [user]
-	name = $FULLNAME
+	name = $NAME
 	email = $EMAIL
 	signingkey = /home/dev/.ssh/sign.pub
 [credential "https://github.com"]
