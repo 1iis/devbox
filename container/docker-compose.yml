@@ -1,0 +1,59 @@
+services:
+  dev:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1111}
+        GID: ${GID:-1111}
+    container_name: dev
+    hostname: dev
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    working_dir: /home/dev
+    user: "${UID:-1111}:${GID:-1111}"
+    environment:
+      TERM: xterm-kitty
+      SSH_AUTH_SOCK: /ssh-agent
+    volumes:
+      # data
+      - /home/dev/git:/home/dev/git
+      - /home/dev/pj:/home/dev/pj
+      # git config
+      - /home/dev/.gitconfig:/home/dev/.gitconfig:ro
+      # SSH config + keys via agent forwarding
+      - /home/dev/.ssh/config:/home/dev/.ssh/config:ro
+      - /home/dev/.ssh/known_hosts:/home/dev/.ssh/known_hosts:ro
+      - /home/dev/.ssh/kit.pub:/home/dev/.ssh/kit.pub:ro
+      - ${SSH_AUTH_SOCK}:/ssh-agent
+      - gh-config:/home/dev/.config/gh
+      # env vars
+      - /home/dev/.oh-my-zsh/custom/env.zsh:/home/dev/.oh-my-zsh/custom/env.zsh:ro
+      # Zsh
+        # .zshrc
+      - /home/dev/.zshrc:/home/dev/.zshrc
+        # aliases: global + user + _tools
+      - /home/dev/.oh-my-zsh/custom/aliases.zsh:/home/dev/.oh-my-zsh/custom/aliases.zsh:ro
+      - /home/dev/.oh-my-zsh/custom/dev.zsh:/home/dev/.oh-my-zsh/custom/dev.zsh:ro
+      - /home/dev/.oh-my-zsh/custom/_git.zsh:/home/dev/.oh-my-zsh/custom/_git.zsh:ro
+      - /home/dev/.oh-my-zsh/custom/_python.zsh:/home/dev/.oh-my-zsh/custom/_python.zsh:ro
+      - /home/dev/.oh-my-zsh/custom/_ytdlp.zsh:/home/dev/.oh-my-zsh/custom/_ytdlp.zsh:ro
+        # history
+      - /home/dev/.oh-my-zsh/custom/history.zsh:/home/dev/.oh-my-zsh/custom/history.zsh:ro
+      - /home/dev/.zsh_history:/home/dev/.zsh_history
+        # theme
+      - /home/dev/.p10k.zsh:/home/dev/.p10k.zsh:ro
+        # container-specific rc (masked mount: host dev/ subdir > guest top-level)
+      - /home/dev/.oh-my-zsh/custom/dev/10-rc.zsh:/home/dev/.oh-my-zsh/custom/10-rc.zsh:ro
+      # Codex CLI
+      - codex-config:/home/dev/.codex
+
+      # Removed, private keys are handled by ssh-agent
+      # - /home/dev/.ssh/github:/home/dev/.ssh/github:ro
+
+      # Uncomment only if you truly need host Docker access:
+      # - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  gh-config:
+  codex-config:

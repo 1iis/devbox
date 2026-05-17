@@ -1,0 +1,20 @@
+#----------------------------
+# 1iis/devbox
+#----------------------------
+# secrets / local state
+env.zsh
+*.secret
+*.token
+*.key
+*.pem
+# SSH material
+.ssh/
+!templates/ssh_config.example
+# tool auth/state
+.codex/
+.config/gh/
+.npm/
+.zsh_history
+# local machine config
+.local/
+.cache/
