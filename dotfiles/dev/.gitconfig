@@ -1,0 +1,37 @@
+[user]
+	name = Full Name
+	email = $USER@example.com
+	signingkey = /home/dev/.ssh/$USER.pub
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[commit]
+	gpgsign = true
+[gpg]
+	format = ssh
+[push]
+	autoSetupRemote = true
+[init]
+	defaultBranch = main
+[alias]
+	l = log --oneline --graph --decorate --date=short --format=\"%C(auto)%h%d %s %C(green)(%ad)\" -20
+	st = status
+	unstage = reset HEAD --
+	ls = !git log --oneline --graph --decorate --stat -5
+[core]
+	pager = less -FRX
+	autocrlf = input
+[color]
+	ui = auto
+[status]
+	submoduleSummary = true
+[rerere]
+	enabled = true
+[diff]
+	algorithm = histogram
+	submodule = log
+[submodule]
+	recurse = true
