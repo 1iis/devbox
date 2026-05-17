@@ -3,6 +3,8 @@
 # ============================================================================
 
 # Who and where am I? (colors: blue=dev@host mint=dev@ctn none=other)
+# This is a good example of function that can be greatly simplified by making
+# it user@host-specific (e.g. following our `10-rc.zsh` pattern).
 alias '?@?'='if [ "$HOST" = "dev" ]; then \
     echo -e "\033[38;5;49m$(whoami)@$(hostname):$(pwd)\033[0m"; \
   elif [ "$USER" = "dev" ]; then \
