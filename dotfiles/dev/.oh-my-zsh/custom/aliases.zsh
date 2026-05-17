@@ -25,16 +25,12 @@ alias ',,'='clear && ?@? && l '
 alias ',g'='cd ~/git'
 alias ',p'='cd ~/pj'
 
-# auto-verbosity
+# auto-verbosity (pipe to 1>/dev/null to suppress)
 alias 'mv'='mv -v '
-alias 'mv-base'='mv '
 alias 'cp'='cp -v '
-alias 'cp-base'='cp '
 alias 'rm'='rm -v '
-alias 'rm-base'='rm '
-alias 'mk'='mkdir -v '
+alias 'mk'='mkdir -pv '
 alias 'rmdir'='rmdir -v '
-alias 'rmdir-base'='rmdir '
 
 # quick edit this
 alias 'rc'="e $HOME/.zshrc"
