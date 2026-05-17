@@ -3,9 +3,10 @@ A small SWE workstation setup built for a host machine and a Docker container, w
 
 Global variables: used to install `devbox`.
 
-| $var  | Purpose | Example/Default
+| `$var`  | Purpose | Example/Default
 |-------|---------|-----------------
-| DEV   | Name of `dev` user | `dev`
-| NAME  | Full name | Kit Ledru
-| EMAIL | Git email | coder@example.com
-| CTNAME| Container name | `dev`
+| `NAME`  | Full name | Kit Ledru
+| `EMAIL` | Git email | coder@example.com
+| `DEV`   | Name of `dev` user | `dev`
+| `CTHOST`| Container hostname | `dev`
+| `ID`    | UID and GID | `1111`
