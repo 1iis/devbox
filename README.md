@@ -7,6 +7,6 @@ Global variables: used to install `devbox`.
 |-------|---------|-----------------
 | `NAME`  | Full name | Kit Ledru
 | `EMAIL` | Git email | coder@example.com
+| `ID`    | UID and GID | `1111`
 | `DEV`   | Name of `dev` user | `dev`
 | `CTHOST`| Container hostname | `dev`
-| `ID`    | UID and GID | `1111`
