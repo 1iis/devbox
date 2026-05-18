@@ -18,3 +18,6 @@ env.zsh
 # local machine config
 .local/
 .cache/
+
+# solveit
+*.ipynb
