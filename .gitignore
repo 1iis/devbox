@@ -21,3 +21,8 @@ env.zsh
 
 # solveit
 *.ipynb
+
+# python
+__pycache__/
+*.py[cod]
+.ruff_cache/
