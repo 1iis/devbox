@@ -53,7 +53,7 @@ USER dev
 WORKDIR /home/dev
 
 # Pre-create directories that volume mounts would otherwise auto-create as root
-RUN mkdir -p ~/.config ~/.ssh ~/.codex
+RUN mkdir -p ~/.config/gh ~/.ssh ~/.codex
 
 # npm global prefix + Codex CLI
 RUN PATH="/opt/node/bin:$PATH" /opt/node/bin/npm config set prefix /home/dev/.npm/global
