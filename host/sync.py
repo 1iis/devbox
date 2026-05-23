@@ -353,7 +353,9 @@ def check_compose(o: dict, c: dict, apply: bool) -> dict:
     yml = o["cwd"]/"docker-compose.yml"
     if not yml.exists():
         return res(o["name"], "warn", f"missing {yml}")
-    cp = cmd(["docker", "compose", "-f", str(yml), "--project-directory", str(o["cwd"]), "config"])
+    env = os.environ.copy()
+    env.setdefault("SSH_AUTH_SOCK", "/tmp/devbox-ci-ssh-agent.sock")
+    cp = subprocess.run(["docker", "compose", "-f", str(yml), "--project-directory", str(o["cwd"]), "config"], env=env, text=True, capture_output=True)
     if cp.returncode != 0:
         return res(o["name"], "warn", cp.stderr.strip())
     return res(o["name"])
@@ -455,7 +457,7 @@ def next_steps(c: dict, rs: list[dict]) -> None:
     steps = []
     if not (home/".ssh/sign.pub").exists(): steps.append(f"create/copy SSH signing public key: {home}/.ssh/sign.pub")
     if any(r["name"] == "command gh" and r["state"] == "ok" for r in rs): steps.append(f"as {c['dev']}, run `gh auth status` or `gh auth login` if needed")
-    steps.append("start a shell with `docker compose exec dev zsh` once the service is running")
+    steps.append("after starting the service, enter it with `make shell`")
     if steps:
         print("\nNext steps:")
         for s in steps: print(f"- {s}")
