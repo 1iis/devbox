@@ -1,5 +1,6 @@
 > [!WARNING]
-> `devbox` is early alpha software. It modifies host users, files, packages, systemd units, Docker configuration, and shell/Git setup. Review the code first and test on a disposable Ubuntu VM or VPS before using it on an important machine.
+> **`devbox` is early alpha software. It modifies host users, files, packages, systemd units, Docker configuration, and shell/Git setup.**  
+> Review the code first and test on a disposable Ubuntu VM or VPS before using it on an important machine.
 
 ---
 
