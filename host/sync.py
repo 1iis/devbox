@@ -10,13 +10,13 @@ HOME = Path("/home/dev")
 RUN = HOME/".config/dev-env"
 APP = "dev-container.service"
 PKGS = [
-    "ca-certificates", "curl", "git", "gh", "zsh", "openssh-client", "sudo",
+    "ca-certificates", "curl", "git", "gh", "make", "zsh", "openssh-client", "sudo",
     "docker.io", "docker-compose-v2", "python3", "fzf", "ripgrep", "fd-find",
     "bat", "tree",
 ]
 
 CMDS = [
-    "curl", "git", "gh", "zsh", "ssh", "sudo", "docker", "python3",
+    "curl", "git", "gh", "make", "zsh", "ssh", "sudo", "docker", "python3",
     "fzf", "rg", "fdfind", "batcat", "tree",
 ]
 DIRS = [

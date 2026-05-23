@@ -136,38 +136,32 @@ git clone https://github.com/1iis/devbox.git
 cd devbox
 ```
 
-Prepare local config:
+On a fresh Ubuntu host, use Python for the first bootstrap step. `make` is installed by `host/sync.py`, so do not assume it exists yet:
 
 ```zsh
-cp templates/env.zsh.example dotfiles/dev/.oh-my-zsh/custom/env.zsh
-cp templates/ssh_config.example ~/.ssh/config
+python3 -m py_compile host/sync.py
+python3 host/sync.py status --name "Your Name" --email you@example.com
+sudo python3 host/sync.py enable --name "Your Name" --email you@example.com
 ```
 
-Edit the local values:
+After that, the normal Makefile workflow is available:
 
 ```zsh
-$EDITOR dotfiles/dev/.oh-my-zsh/custom/env.zsh
-$EDITOR ~/.ssh/config
+make check
+make status
+make start
+make shell
 ```
 
-Bootstrap the host:
+Prepare local config and secrets as needed:
 
 ```zsh
-sudo python3 host/sync.py
+sudo -u dev cp templates/env.zsh.example /home/dev/.oh-my-zsh/custom/env.zsh
+sudo -u dev editor /home/dev/.oh-my-zsh/custom/env.zsh
+sudo -u dev editor /home/dev/.ssh/config
 ```
 
-Build and start the container:
-
-```zsh
-scripts/build-container.sh
-scripts/enter-container.sh
-```
-
-Or use the host shell aliases after sync:
-
-```zsh
-dev
-```
+The sync command creates these files once if missing and will not overwrite local secret/config content afterwards.
 
 ## First-run authentication
 
