@@ -16,6 +16,7 @@ for f in scripts/*.sh; do
 done
 
 echo "== compose config =="
-SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-/tmp/devbox-ci-ssh-agent.sock}"   docker compose -f container/docker-compose.yml --project-directory container config >/dev/null
+SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-/tmp/devbox-ci-ssh-agent.sock}" \
+  docker compose -f container/docker-compose.yml --project-directory container config >/dev/null
 
 echo "ok"
