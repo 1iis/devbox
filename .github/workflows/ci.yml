@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      SSH_AUTH_SOCK: /tmp/devbox-ci-ssh-agent.sock
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run fast checks
+        run: make check
