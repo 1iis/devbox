@@ -1,14 +1,19 @@
-[build-system]
-requires = ["setuptools>=69"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "devbox"
 version = "0.1.0"
-description = "A small SWE workstation setup built for a host machine and a Docker container, with one work identity shared across both."
+description = "A small reproducible SWE workstation setup for a host machine and disposable Docker container."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+]
+
+[tool.ruff]
+line-length = 160
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
