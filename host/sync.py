@@ -19,15 +19,21 @@ CMDS = [
     "curl", "git", "gh", "make", "zsh", "ssh", "sudo", "docker", "python3",
     "fzf", "rg", "fdfind", "batcat", "tree",
 ]
+
 DIRS = [
     {"path": HOME/"git", "owner": "dev:dev", "mode": 0o755},
     {"path": HOME/"pj", "owner": "dev:dev", "mode": 0o755},
     {"path": HOME/".config", "owner": "dev:dev", "mode": 0o755},
     {"path": RUN, "owner": "dev:dev", "mode": 0o755},
-    {"path": HOME/".oh-my-zsh", "owner": "dev:dev", "mode": 0o755},
-    {"path": HOME/".oh-my-zsh/custom", "owner": "dev:dev", "mode": 0o755},
     {"path": HOME/".oh-my-zsh/custom/dev", "owner": "dev:dev", "mode": 0o755},
     {"path": HOME/".ssh", "owner": "dev:dev", "mode": 0o700},
+]
+
+OMZ_REPOS = [
+    {"url": "https://github.com/ohmyzsh/ohmyzsh.git", "dst": HOME/".oh-my-zsh", "owner": "dev:dev"},
+    {"url": "https://github.com/romkatv/powerlevel10k.git", "dst": HOME/".oh-my-zsh/custom/themes/powerlevel10k", "owner": "dev:dev"},
+    {"url": "https://github.com/zsh-users/zsh-autosuggestions", "dst": HOME/".oh-my-zsh/custom/plugins/zsh-autosuggestions", "owner": "dev:dev"},
+    {"url": "https://github.com/zsh-users/zsh-syntax-highlighting.git", "dst": HOME/".oh-my-zsh/custom/plugins/zsh-syntax-highlighting", "owner": "dev:dev"},
 ]
 FILES = [
     {"src": ROOT/"dotfiles/dev/.zshrc", "dst": HOME/".zshrc", "owner": "dev:dev", "mode": 0o644},
@@ -133,9 +139,11 @@ def plan(c: dict, groups: list[str]) -> list[dict]:
         ops.append({"kind": "group", "name": f"group {dev}", "group": dev, "gid": id})
         ops.append({"kind": "user", "name": f"user {dev}", "user": dev, "uid": id, "gid": id, "home": home, "shell": "/usr/bin/zsh", "groups": ["sudo", "docker"]})
 
+        omz_repos = [{**r, "dst": Path(str(r["dst"]).replace(str(HOME), str(home))), "owner": own} for r in OMZ_REPOS]
+        ops += [{"kind": "git_repo", "name": f"repo {r['dst']}", **r} for r in omz_repos]
+
         dirs = [{**d, "path": Path(str(d["path"]).replace(str(HOME), str(home))), "owner": own} for d in DIRS]
         ops += [{"kind": "dir", "name": f"dir {d['path']}", **d} for d in dirs]
-
         files = [
             {"src": root/"dotfiles/dev/.zshrc", "dst": home/".zshrc", "owner": own, "mode": 0o644},
             {"src": root/"dotfiles/dev/.p10k.zsh", "dst": home/".p10k.zsh", "owner": own, "mode": 0o644},
@@ -185,6 +193,7 @@ def op(o: dict, c: dict, apply: bool) -> dict:
         "group": ensure_group,
         "user": ensure_user,
         "dir": ensure_dir,
+        "git_repo": ensure_git_repo,
         "file": ensure_file,
         "render": ensure_render,
         "once": ensure_once,
@@ -265,6 +274,25 @@ def ensure_user(o: dict, c: dict, apply: bool) -> dict:
     if not apply: return res(o["name"], "would_change", " ".join(xs))
     cp = cmd(xs)
     return res(o["name"], "changed" if cp.returncode == 0 else "error", cp.stderr.strip())
+def ensure_git_repo(o: dict, c: dict, apply: bool) -> dict:
+    """Ensure an upstream Git repository exists at the desired path."""
+    dst = o["dst"]
+    if dst.exists():
+        if (dst/".git").is_dir():
+            return res(o["name"])
+        return res(o["name"], "warn", "exists but is not a git checkout; inspect manually")
+    if not apply:
+        return res(o["name"], "would_change", f"clone {o['url']}")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    u, g = ids(o["owner"])
+    os.chown(dst.parent, u, g)
+    cp = cmd(["sudo", "-H", "-u", o["owner"].partition(":")[0], "git", "clone", "--depth=1", o["url"], str(dst)])
+    if cp.returncode != 0:
+        return res(o["name"], "error", cp.stderr.strip())
+    for p in [dst, *dst.rglob("*")]:
+        os.chown(p, u, g)
+    return res(o["name"], "changed")
+
 def ensure_dir(o: dict, c: dict, apply: bool) -> dict:
     """Ensure a directory exists with desired ownership and mode."""
     p = o["path"]
@@ -359,6 +387,7 @@ def check_compose(o: dict, c: dict, apply: bool) -> dict:
     if cp.returncode != 0:
         return res(o["name"], "warn", cp.stderr.strip())
     return res(o["name"])
+
 def cmd(xs: list[str], check: bool = False, input: str | None = None) -> subprocess.CompletedProcess:
     """Run a command without shell=True, capturing stdout and stderr."""
     return subprocess.run(xs, input=input, text=True, capture_output=True, check=check)
@@ -455,12 +484,16 @@ def next_steps(c: dict, rs: list[dict]) -> None:
     """Print concise manual follow-up steps after the report."""
     home = c["home"]
     steps = []
-    if not (home/".ssh/sign.pub").exists(): steps.append(f"create/copy SSH signing public key: {home}/.ssh/sign.pub")
+    try:
+        if not (home/".ssh/sign.pub").exists(): steps.append(f"create/copy SSH signing public key: {home}/.ssh/sign.pub")
+    except PermissionError:
+        steps.append(f"create/copy SSH signing public key: {home}/.ssh/sign.pub")
     if any(r["name"] == "command gh" and r["state"] == "ok" for r in rs): steps.append(f"as {c['dev']}, run `gh auth status` or `gh auth login` if needed")
     steps.append("after starting the service, enter it with `make shell`")
     if steps:
         print("\nNext steps:")
         for s in steps: print(f"- {s}")
+
 def main(argv=None) -> int:
     """Run the devbox sync command."""
     a = cli(argv)
