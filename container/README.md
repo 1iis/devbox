@@ -1,186 +1,101 @@
 # devbox container
 
-A disposable, reproducible Ubuntu 24.04 development container for the `devbox` workstation pattern.
+Disposable Ubuntu 24.04 development container for the `devbox` workstation pattern.
 
-The container is not the source of truth for important state. It is a clean execution and tooling layer on top of the host `dev` user's files, configuration, SSH agent, and Docker daemon.
+The container is the rebuildable execution layer. Durable state, work files, Git identity, SSH agent access, and local shell configuration live on the host under `/home/dev` and are bind-mounted into the container.
 
 ## Model
 
-The container runs as:
+- host user: `dev`, UID/GID `1111` by default
+- container user: `dev`, UID/GID passed through from Compose, defaulting to `1111`
+- container hostname: `dev`
+- service/container name: `dev`
+- runtime directory on host: `/home/dev/.config/dev-env`
 
-```text
-user: dev
-uid: 1111 by default
-gid: 1111 by default
-hostname: dev
-home: /home/dev
-```
-
-The intended host/container pairing is:
-
-```text
-dev@box  -> durable host work identity
-dev@dev  -> disposable container work shell
-```
-
-The host owns durable state. The container consumes selected host files through bind mounts and named Docker volumes.
-
-## Files
-
-```text
-container/Dockerfile
-container/docker-compose.yml
-```
-
-Installed runtime location on the host:
-
-```text
-/home/dev/.config/dev-env
-```
-
-Typical usage from that directory:
+Start the container with Docker Compose:
 
 ```bash
 docker compose up -d
-docker compose exec dev zsh
 ```
 
-Or, once the host aliases/systemd integration are installed, use the higher-level `devbox`/shell helpers from the host environment.
-
-## Dockerfile
-
-The image is based on:
-
-```text
-ubuntu:24.04
-```
-
-It creates a `dev` user and group using build args:
-
-```text
-UID=1111
-GID=1111
-```
-
-The image installs a daily-driver command-line toolkit, including:
-
-- build tools
-- Git
-- GitHub CLI
-- zsh
-- oh-my-zsh
-- Powerlevel10k
-- zsh-autosuggestions
-- zsh-syntax-highlighting
-- fzf
-- ripgrep
-- fd-find
-- bat
-- tree
-- jq / yq
-- btop / htop
-- rclone
-- strace
-- tcpdump
-- Docker CLI
-- uv
-- Node.js under `/opt/node`
-- npm global prefix under `/home/dev/.npm/global`
-- OpenAI Codex CLI
-- bubblewrap for sandbox support
-
-The container command is intentionally simple:
-
-```text
-sleep infinity
-```
-
-There is no SSH server and no special entrypoint ownership logic. The container is entered with Docker Compose, for example:
+Enter the shell:
 
 ```bash
 docker compose exec dev zsh
 ```
 
-## Compose service
+The container command is intentionally simple:
 
-The Compose service is named:
-
-```text
-dev
+```bash
+sleep infinity
 ```
 
-It sets:
+There is no SSH daemon, no entrypoint ownership repair script, and no private state that should make the container precious.
+
+## Image contents
+
+The image is based on `ubuntu:24.04` and installs a normal command-line SWE toolkit, including:
+
+- build tools, Git, curl, sudo, zsh, nano
+- Python via `python-is-python3`
+- GitHub CLI, Docker CLI, uv
+- fzf, ripgrep, fd-find, bat, tree, jq, yq, tldr
+- btop, htop, rclone, strace, netcat, tcpdump, acl
+- kitty terminfo
+- bubblewrap for Codex sandboxing
+- Node.js under `/opt/node`
+- npm global prefix at `/home/dev/.npm/global`
+- `@openai/codex` installed globally
+- oh-my-zsh, Powerlevel10k, zsh-autosuggestions, and zsh-syntax-highlighting
+
+Runtime Node/npm PATH setup is handled by the container-only zsh fragment mounted as:
 
 ```text
-container_name: dev
-hostname: dev
-working_dir: /home/dev
-user: ${UID:-1111}:${GID:-1111}
-SSH_AUTH_SOCK=/ssh-agent
+/home/dev/.oh-my-zsh/custom/10-rc.zsh
 ```
-
-The host SSH agent socket is forwarded into the container. Private SSH keys are not copied into the image and are not bind-mounted into the container.
 
 ## Mounted host state
 
-The container bind-mounts selected host paths from `/home/dev`.
+Compose bind-mounts host-owned work state into the container, including:
 
-Work directories:
+- `/home/dev/git` → `/home/dev/git`
+- `/home/dev/pj` → `/home/dev/pj`
+- `/home/dev/.zshrc`
+- selected files from `/home/dev/.oh-my-zsh/custom/`
+- `/home/dev/.p10k.zsh`
+- `/home/dev/.gitconfig`
+- `/home/dev/.zsh_history`
+- `/home/dev/.oh-my-zsh/custom/env.zsh`
 
-```text
-/home/dev/git -> /home/dev/git
-/home/dev/pj  -> /home/dev/pj
-```
+The intent is that `dev@box` and `dev@dev` share the same practical shell and Git behavior without turning the container into a second source of truth.
 
-Shell and prompt configuration:
+## SSH and signing
 
-```text
-/home/dev/.zshrc
-/home/dev/.p10k.zsh
-/home/dev/.zsh_history
-/home/dev/.oh-my-zsh/custom/aliases.zsh
-/home/dev/.oh-my-zsh/custom/dev.zsh
-/home/dev/.oh-my-zsh/custom/_git.zsh
-/home/dev/.oh-my-zsh/custom/_python.zsh
-/home/dev/.oh-my-zsh/custom/history.zsh
-/home/dev/.oh-my-zsh/custom/env.zsh
-```
+Private SSH keys stay on the host.
 
-Container-specific shell setup:
+The container receives only:
 
-```text
-/home/dev/.oh-my-zsh/custom/dev/10-rc.zsh
-  -> /home/dev/.oh-my-zsh/custom/10-rc.zsh inside the container
-```
+- the forwarded host SSH agent socket at `/ssh-agent`
+- `/home/dev/.ssh/config`
+- `/home/dev/.ssh/known_hosts`
+- `/home/dev/.ssh/sign.pub`
 
-This works because oh-my-zsh loads top-level `.zsh` files from `$ZSH_CUSTOM`, but does not auto-load files from subdirectories.
-
-SSH metadata and signing public key:
+Compose sets:
 
 ```text
-/home/dev/.ssh/config
-/home/dev/.ssh/known_hosts
-/home/dev/.ssh/sign.pub
+SSH_AUTH_SOCK=/ssh-agent
 ```
 
-Git configuration:
+This allows GitHub SSH auth, server SSH auth, and SSH commit signing to work through host-owned identity material without copying private keys into the container.
 
-```text
-/home/dev/.gitconfig
-```
+## Persisted tool auth/state
 
-The private key material remains host-only. SSH authentication and SSH commit signing use the forwarded SSH agent and mounted public/config metadata.
+Some tool state is intentionally persisted in Docker named volumes:
 
-## Named volumes
+- `gh-config` mounted at `/home/dev/.config/gh`
+- `codex-config` mounted at `/home/dev/.codex`
 
-Tool authentication/state that should survive container rebuilds is stored in Docker named volumes:
-
-```text
-gh-config     -> /home/dev/.config/gh
-codex-config  -> /home/dev/.codex
-```
-
-This keeps container rebuilds cheap while avoiding unnecessary host-path coupling for tool-specific state.
+This lets GitHub CLI and Codex authentication survive container rebuilds while keeping the container itself disposable.
 
 ## Host Docker access
 
@@ -190,19 +105,15 @@ The Compose file includes a commented Docker socket mount:
 # - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-Leave this disabled unless the container genuinely needs to control the host Docker daemon. Mounting the Docker socket gives the container broad control over the host.
+Enable this only deliberately. Mounting the host Docker socket gives the container broad control over the host Docker daemon.
 
-## Rebuild philosophy
+## Files
 
-The container should be safe to discard and recreate.
+- `Dockerfile` defines the image.
+- `docker-compose.yml` defines the local runtime shape.
 
-Durable data belongs on the host or in explicit named volumes. If the container gets stale or messy, rebuild it rather than preserving it by hand.
+In an installed host setup, these files are copied to:
 
-Useful commands from `/home/dev/.config/dev-env`:
-
-```bash
-docker compose build
-docker compose up -d
-docker compose exec dev zsh
-docker compose down
+```text
+/home/dev/.config/dev-env/
 ```
