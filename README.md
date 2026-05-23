@@ -9,12 +9,12 @@
 
 The premise is basic: in isolation from your main/personal/admin user, `devbox` creates a dedicated `dev` user, and a corresponding `dev` user in a Docker container. Both `dev` users are in sync, including real-time shell history and configuration files. They both behave identically, as if one. This lets you run things either isolated in Docker or locally on the workstation seamlessly.
 
-Global variables: used to install `devbox`. Change `NAME` and `EMAIL` to fit your `git` setup, in [`env.zsh`](/dotfiles/dev/.oh-my-zsh/custom/env.zsh__EDITME) renamed as such.
+Global variables: used to install `devbox`. Change `NAME` and `EMAIL` to fit your `git` setup, in [`env.zsh`](/dotfiles/dev/.oh-my-zsh/custom/env.zsh_EDITME) renamed as such.
 
 | `$var`  | Purpose | Example/Default
 |-------|---------|-----------------
-| `NAME`  | Full name | Kit Ledru
-| `EMAIL` | Git email | coder@example.com
+| `NAME`  | Full name | Your Name
+| `EMAIL` | Git email | email@example.com
 | `ID`    | UID and GID | `1111`
 | `DEV`   | Name of `dev` user | `dev`
 | `CTHOST`| Container hostname | `dev`
