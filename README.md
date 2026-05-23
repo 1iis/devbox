@@ -1,4 +1,10 @@
+> [!WARNING]
+> `devbox` is early alpha software. It modifies host users, files, packages, systemd units, Docker configuration, and shell/Git setup. Review the code first and test on a disposable Ubuntu VM or VPS before using it on an important machine.
+
+---
+
 # devbox
+
 > A small SWE workstation setup built for a host machine and a Docker container, with one work identity shared across both.
 
 The premise is basic: in isolation from your main/personal/admin user, `devbox` creates a dedicated `dev` user, and a corresponding `dev` user in a Docker container. Both `dev` users are in sync, including real-time shell history and configuration files. They both behave identically, as if one. This lets you run things either isolated in Docker or locally on the workstation seamlessly.
