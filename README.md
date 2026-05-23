@@ -21,7 +21,7 @@ Global variables: used to install `devbox`. Change `NAME` and `EMAIL` to fit you
 - durable state on the host or in named volumes
 - disposable container tooling
 - no private keys baked into the container
-- no magic beyond Docker, zsh, Git, and a small bootstrap script
+- no magic beyond Docker, zsh, Git, and a small sync script
 
 The goal is not maximal abstraction. The goal is a workstation you can understand, rebuild, and trust.
 
@@ -73,7 +73,7 @@ devbox/
             10-rc.zsh
 
   host/
-    bootstrap.py
+    sync.py
     systemd/
       dev-container.service
 
@@ -94,7 +94,7 @@ Each directory has one job:
 |---|---|
 | `container/` | Docker image and Compose service definition |
 | `dotfiles/dev/` | Files installed into `/home/dev` |
-| `host/` | Host bootstrap and systemd integration |
+| `host/` | Host setup sync and systemd integration |
 | `templates/` | Public-safe examples for secrets and machine-local config |
 | `scripts/` | Thin wrappers for common operations |
 
@@ -146,7 +146,7 @@ $EDITOR ~/.ssh/config
 Bootstrap the host:
 
 ```zsh
-sudo python3 host/bootstrap.py
+sudo python3 host/sync.py
 ```
 
 Build and start the container:
@@ -156,7 +156,7 @@ scripts/build-container.sh
 scripts/enter-container.sh
 ```
 
-Or use the host shell aliases after bootstrap:
+Or use the host shell aliases after sync:
 
 ```zsh
 dev
