@@ -144,12 +144,19 @@ python3 host/sync.py status --name "Your Name" --email you@example.com
 sudo python3 host/sync.py enable --name "Your Name" --email you@example.com
 ```
 
-After that, the normal Makefile workflow is available:
+After that, the normal Makefile workflow is available. Host-state sync/status checks inspect `/home/dev` and system paths, so run them with `sudo` from the admin/installer user:
 
 ```zsh
 make check
-make status
-make start
+sudo make status
+sudo make enable
+sudo make start
+```
+
+For daily SWE work, switch to the managed `dev` identity and enter the container from there:
+
+```zsh
+sudo -iu dev
 make shell
 ```
 
