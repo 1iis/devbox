@@ -1,0 +1,10 @@
+Host github.com
+    HostName github.com
+    User git
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    IdentityFile ~/.ssh/github
+
+Host *
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
