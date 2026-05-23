@@ -150,15 +150,18 @@ After that, the normal Makefile workflow is available. Host-state sync/status ch
 make check
 sudo make status
 sudo make enable
-sudo make start
 ```
 
-For daily SWE work, switch to the managed `dev` identity and enter the container from there:
+For the MVP daily workflow, switch to the managed `dev` identity and start/enter the container from that login session. This preserves access to the interactive SSH agent via `SSH_AUTH_SOCK`:
 
 ```zsh
 sudo -iu dev
-make shell
+cd ~/.config/dev-env
+docker compose up -d
+docker compose exec dev zsh
 ```
+
+`make start` currently controls the systemd service path. That path is useful for validation and future polish, but the preferred MVP work loop is direct Compose from `dev`.
 
 Prepare local config and secrets as needed:
 
