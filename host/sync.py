@@ -77,8 +77,8 @@ def cli(argv=None) -> argparse.Namespace:
     p.add_argument("--root", type=Path, default=ROOT, help="repo root; default: inferred from this file")
     p.add_argument("-y", "--yes", action="store_true", help="assume yes for package/system mutations")
     p.add_argument("-v", "--verbose", action="store_true", help="print extra command details")
-    p.add_argument("--ssh-sign-pub", default=None,
-        help="path to existing SSH signing public key to copy")
+    p.add_argument("--ssh-sign-key", default=None,
+        help="path to existing SSH signing private key (sign); sign.pub inferred")
     p.add_argument("--ssh-private-key", default=None,
         help="path to existing SSH auth private key to copy")
     p.add_argument("--generate-ssh-keys", action="store_true",
@@ -99,15 +99,15 @@ def cfg(a: argparse.Namespace, env=os.environ) -> dict:
         raise SystemExit("NAME and EMAIL are required: pass --name/--email, set env vars, or configure global git user.name/user.email")
 
     home = dev_home
-    ssh_sign_pub = a.ssh_sign_pub or os.environ.get("SSH_SIGN_PUB")
+    ssh_sign_key = a.ssh_sign_key or os.environ.get("SSH_SIGN_KEY")
     ssh_private_key = a.ssh_private_key or os.environ.get("SSH_PRIVATE_KEY")
     ssh_generate = a.generate_ssh_keys
 
-    if not ssh_generate and not ssh_sign_pub and not ssh_private_key:
+    if not ssh_generate and not ssh_sign_key and not ssh_private_key:
         if not (home / ".ssh" / "sign.pub").exists() and sys.stdin.isatty():
-            ans = input("SSH signing public key path (or empty to generate new): ").strip()
+            ans = input("SSH signing private key path (or empty to generate new): ").strip()
             if ans:
-                ssh_sign_pub = ans
+                ssh_sign_key = ans
         if not (home / ".ssh" / "dev").exists() and sys.stdin.isatty():
             ans = input("SSH auth private key path (or empty to generate new): ").strip()
             if ans:
@@ -128,7 +128,7 @@ def cfg(a: argparse.Namespace, env=os.environ) -> dict:
         "app": APP,
         "yes": a.yes,
         "verbose": a.verbose,
-        "ssh_sign_pub": ssh_sign_pub,
+        "ssh_sign_key": ssh_sign_key,
         "ssh_private_key": ssh_private_key,
         "generate_ssh_keys": ssh_generate,
     }
@@ -430,7 +430,7 @@ def ensure_ssh_keys(o: dict, c: dict, apply: bool) -> dict:
     generated = []
 
     for label, priv, pub, src in [
-        ("signing key", sign_file, sign_pub, c.get("ssh_sign_pub")),
+        ("signing key", sign_file, sign_pub, c.get("ssh_sign_key")),
         ("auth key", auth_file, auth_pub, c.get("ssh_private_key")),
     ]:
         if pub.exists() and priv.exists():
