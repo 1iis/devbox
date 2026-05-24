@@ -77,10 +77,17 @@ def cli(argv=None) -> argparse.Namespace:
     p.add_argument("--root", type=Path, default=ROOT, help="repo root; default: inferred from this file")
     p.add_argument("-y", "--yes", action="store_true", help="assume yes for package/system mutations")
     p.add_argument("-v", "--verbose", action="store_true", help="print extra command details")
+    p.add_argument("--ssh-sign-pub", default=None,
+        help="path to existing SSH signing public key to copy")
+    p.add_argument("--ssh-private-key", default=None,
+        help="path to existing SSH auth private key to copy")
+    p.add_argument("--generate-ssh-keys", action="store_true",
+        help="force ssh-keygen instead of importing")
     return p.parse_args(argv)
 def cfg(a: argparse.Namespace, env=os.environ) -> dict:
     """Build the effective sync configuration."""
-    gu = git_user()
+    dev_home = Path(f"/home/{a.dev}")
+    gu = git_user(home=dev_home)
     name = a.name or env.get("NAME") or gu.get("name")
     email = a.email or env.get("EMAIL") or gu.get("email")
 
@@ -91,7 +98,21 @@ def cfg(a: argparse.Namespace, env=os.environ) -> dict:
     if not name or not email:
         raise SystemExit("NAME and EMAIL are required: pass --name/--email, set env vars, or configure global git user.name/user.email")
 
-    home = Path(f"/home/{a.dev}")
+    home = dev_home
+    ssh_sign_pub = a.ssh_sign_pub or os.environ.get("SSH_SIGN_PUB")
+    ssh_private_key = a.ssh_private_key or os.environ.get("SSH_PRIVATE_KEY")
+    ssh_generate = a.generate_ssh_keys
+
+    if not ssh_generate and not ssh_sign_pub and not ssh_private_key:
+        if not (home / ".ssh" / "sign.pub").exists() and sys.stdin.isatty():
+            ans = input("SSH signing public key path (or empty to generate new): ").strip()
+            if ans:
+                ssh_sign_pub = ans
+        if not (home / ".ssh" / "dev").exists() and sys.stdin.isatty():
+            ans = input("SSH auth private key path (or empty to generate new): ").strip()
+            if ans:
+                ssh_private_key = ans
+
     return {
         "cmd": a.cmd,
         "apply": a.cmd != "status",
@@ -107,14 +128,20 @@ def cfg(a: argparse.Namespace, env=os.environ) -> dict:
         "app": APP,
         "yes": a.yes,
         "verbose": a.verbose,
+        "ssh_sign_pub": ssh_sign_pub,
+        "ssh_private_key": ssh_private_key,
+        "generate_ssh_keys": ssh_generate,
     }
 
 
-def git_user() -> dict:
-    """Return global Git user.name/user.email when available."""
+def git_user(home: Path | None = None) -> dict:
+    """Return Git user.name/user.email from global or explicit home config."""
     r = {}
     for key, out_key in [("user.name", "name"), ("user.email", "email")]:
-        cp = cmd(["git", "config", "--global", key])
+        if home:
+            cp = cmd(["git", "config", "--file", str(home/".gitconfig"), key])
+        else:
+            cp = cmd(["git", "config", "--global", key])
         if cp.returncode == 0 and cp.stdout.strip():
             r[out_key] = cp.stdout.strip()
     return r
@@ -166,6 +193,8 @@ def plan(c: dict, groups: list[str]) -> list[dict]:
         ]
         ops += [{"kind": "once", "name": f"create-once {o['dst']}", **o} for o in once]
 
+        ops.append({"kind": "ssh_keys", "name": "SSH keys for dev user"})
+
     if "systemd" in groups:
         ops.append({"kind": "unit", "name": f"unit {c['app']}", "path": Path("/etc/systemd/system")/c["app"]})
     if "enable" in groups:
@@ -200,6 +229,7 @@ def op(o: dict, c: dict, apply: bool) -> dict:
         "unit": ensure_unit,
         "svc": ensure_svc,
         "compose": check_compose,
+        "ssh_keys": ensure_ssh_keys,
     }.get(o.get("kind"))
     if not f:
         return res(o.get("name", "operation"), "error", f"unknown operation kind: {o.get('kind')}")
@@ -484,6 +514,10 @@ def next_steps(c: dict, rs: list[dict]) -> None:
     """Print concise manual follow-up steps after the report."""
     home = c["home"]
     steps = []
+    for r in rs:
+        if r["name"] == "SSH keys for dev user" and "generated" in r.get("detail", ""):
+            steps.append(f"add public keys to GitHub: cat {home}/.ssh/sign.pub {home}/.ssh/dev.pub")
+            break
     try:
         if not (home/".ssh/sign.pub").exists(): steps.append(f"create/copy SSH signing public key: {home}/.ssh/sign.pub")
     except PermissionError:
@@ -493,7 +527,6 @@ def next_steps(c: dict, rs: list[dict]) -> None:
     if steps:
         print("\nNext steps:")
         for s in steps: print(f"- {s}")
-
 def main(argv=None) -> int:
     """Run the devbox sync command."""
     a = cli(argv)
