@@ -22,6 +22,9 @@ env.zsh
 # solveit
 *.ipynb
 
+# Whitelist notebooks
+!host/sync.ipynb
+
 # python
 __pycache__/
 *.py[cod]
