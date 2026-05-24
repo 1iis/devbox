@@ -586,7 +586,5 @@ def main(argv=None) -> int:
     rc = report(rs)
     next_steps(c, rs)
     return rc
-
-
 if __name__ == "__main__":
     raise SystemExit(main())
