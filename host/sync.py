@@ -418,6 +418,56 @@ def check_compose(o: dict, c: dict, apply: bool) -> dict:
         return res(o["name"], "warn", cp.stderr.strip())
     return res(o["name"])
 
+def ensure_ssh_keys(o: dict, c: dict, apply: bool) -> dict:
+    """Generate or import SSH key pair and signing key if missing."""
+    ssh_dir = c["home"] / ".ssh"
+    sign_file, sign_pub = ssh_dir / "sign", ssh_dir / "sign.pub"
+    auth_file, auth_pub = ssh_dir / "dev", ssh_dir / "dev.pub"
+    own = f"{c['dev']}:{c['dev']}"
+    u, g = ids(own)
+    label_comment = f"dev@{c['cthost']}"
+
+    generated = []
+
+    for label, priv, pub, src in [
+        ("signing key", sign_file, sign_pub, c.get("ssh_sign_pub")),
+        ("auth key", auth_file, auth_pub, c.get("ssh_private_key")),
+    ]:
+        if pub.exists() and priv.exists():
+            continue
+
+        force_gen = c.get("generate_ssh_keys", False)
+        source = src if not force_gen else None
+
+        if source:
+            src_path = Path(source)
+            if not src_path.exists():
+                return res(o["name"], "error", f"{label}: source missing: {source}")
+            if not apply:
+                generated.append(f"{label} (would copy from {source})")
+                continue
+            shutil.copy2(src_path, priv)
+            pub_src = src_path.with_suffix(src_path.suffix + ".pub") if src_path.suffix != ".pub" else src_path
+            shutil.copy2(pub_src, pub)
+            os.chown(priv, u, g); os.chown(pub, u, g)
+            os.chmod(priv, 0o600); os.chmod(pub, 0o644)
+            generated.append(label)
+        else:
+            if not apply:
+                generated.append(f"{label} (would generate)")
+                continue
+            cp = cmd(["ssh-keygen", "-t", "ed25519", "-C", label_comment,
+                      "-f", str(priv), "-N", ""])
+            if cp.returncode != 0:
+                return res(o["name"], "error", f"{label}: {cp.stderr.strip()}")
+            os.chown(priv, u, g); os.chown(pub, u, g)
+            os.chmod(priv, 0o600); os.chmod(pub, 0o644)
+            generated.append(label)
+
+    if not generated:
+        return res(o["name"])
+    state = "changed" if apply else "would_change"
+    return res(o["name"], state, ", ".join(generated))
 def cmd(xs: list[str], check: bool = False, input: str | None = None) -> subprocess.CompletedProcess:
     """Run a command without shell=True, capturing stdout and stderr."""
     return subprocess.run(xs, input=input, text=True, capture_output=True, check=check)
