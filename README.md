@@ -1,301 +1,245 @@
 > [!WARNING]
-> **`devbox` is early alpha software. It modifies host users, files, packages, systemd units, Docker configuration, and shell/Git setup.**  
-> 
-> Review the code first and test on a disposable Ubuntu VM or VPS.  
-> DO NOT USE ON IMPORTANT MACHINES, or at your own risk.
-
----
+> **`devbox` is beta workstation infrastructure.** It modifies host users, files, packages, Docker configuration, systemd units, and shell/Git setup.
+>
+> It is currently intended for our own small-team Ubuntu workstation workflow. Review the code first and test on a disposable VM or VPS before using it on an important machine.
 
 # devbox
 
-> A small SWE workstation setup built for a host machine and a Docker container, with one work identity shared across both.
+A small, opinionated SWE workstation setup for an Ubuntu host and a disposable Docker container, with one `dev` work identity shared across both.
 
-The premise is basic: in isolation from your main/personal/admin user, `devbox` creates a dedicated `dev` user, and a corresponding `dev` user in a Docker container. Both `dev` users are in sync, including real-time shell history and configuration files. They both behave identically, as if one. This lets you run things either isolated in Docker or locally on the workstation seamlessly.
+`devbox` is not a general platform. It is a practical workstation pattern:
 
-Global variables: used to install `devbox`. Change `NAME` and `EMAIL` to fit your `git` setup, in [`env.zsh`](/dotfiles/dev/.oh-my-zsh/custom/env.zsh_EDITME) renamed as such.
+- the host owns durable state, secrets, users, filesystems, SSH agent access, and Docker;
+- the container is a rebuildable execution/tooling layer;
+- the `dev` user exists on both host and container, with UID/GID `1111` by default;
+- work files live on the host and are bind-mounted into the container;
+- shell config, Git config, aliases, history, and daily tooling are kept close enough that `dev@box` and `dev@dev` feel like one working environment.
 
-| `$var`  | Purpose | Example/Default
-|-------|---------|-----------------
-| `NAME`  | Full name | Your Name
-| `EMAIL` | Git email | email@example.com
-| `ID`    | UID and GID | `1111`
-| `DEV`   | Name of `dev` user | `dev`
-| `CTHOST`| Container hostname | `dev`
+The point is a small, good workstation: boring, explicit, rebuildable, and pleasant to use.
 
-`devbox` gives you a boring, rebuildable, comfortable development environment:
+## Status
 
-- one host `dev` identity
-- one container `dev` identity
-- shared shell, Git, SSH, history, aliases, and work directories
-- durable state on the host or in named volumes
-- disposable container tooling
-- no private keys baked into the container
-- no magic beyond Docker, zsh, Git, and a small sync script
+Current release target: `v0.1.0-beta`.
 
-The goal is not maximal abstraction. The goal is a workstation you can understand, rebuild, and trust.
-
-## Model
-
-There are two layers:
+Supported beta workflow:
 
 ```text
-host
-  owns users, files, secrets, SSH agent, Docker, durable work dirs
-
-container
-  owns tools, shell runtime, isolated agentic tooling, disposable execution state
+admin user clones repo and bootstraps host
+  -> host/sync.py creates/converges the dev user and runtime files
+  -> dev user starts the container directly with Docker Compose
+  -> dev works in either dev@box or dev@dev
 ```
 
-The normal work identity is `dev`.
+Direct Compose from an interactive `dev` login is the supported beta runtime path. The systemd unit can be installed/enabled by the sync script, but fully systemd-managed container startup with interactive SSH-agent semantics is deferred.
 
-```text
-dev@host       durable identity and source of truth
-dev@container  clean execution layer with the same basic shape
-```
+## What you get
 
-The container should feel like the host `dev` user, but it should not become a second precious machine.
+- dedicated host work user: `dev`
+- matching container user: `dev`
+- shared work directories: `/home/dev/git` and `/home/dev/pj`
+- Zsh, Oh My Zsh, Powerlevel10k, aliases, and history setup
+- Git and GitHub CLI configuration
+- SSH authentication/signing through host-owned key material and agent forwarding
+- Docker Compose runtime under `/home/dev/.config/dev-env`
+- active host-side repo/config copy at `/home/dev/.devbox`
+- persistent Docker named volumes for GitHub CLI and Codex state
+- disposable container rebuild/recovery workflow
+
+Private keys are not baked into the image and should not be copied into the container. The container uses the host SSH agent and selected mounted public/config files.
 
 ## Repository layout
 
 ```text
-devbox/
-  container/
-    Dockerfile
-    docker-compose.yml
-    README.md
-
-  dotfiles/
-    dev/
-      .zshrc
-      .gitconfig
-      .p10k.zsh
-      .oh-my-zsh/
-        custom/
-          aliases.zsh
-          dev.zsh
-          history.zsh
-          _docker.zsh
-          _git.zsh
-          _python.zsh
-          10-rc.zsh
-          dev/
-            10-rc.zsh
-
-  host/
-    sync.py
-    systemd/
-      dev-container.service
-
-  templates/
-    env.zsh.example
-    ssh_config.example
-    gitconfig.example
-
-  scripts/
-    check.sh
-    build-container.sh
-    enter-container.sh
+container/              Dockerfile, Compose file, container docs
+dotfiles/dev/           files installed into /home/dev
+host/sync.py            host convergence engine
+host/sync.ipynb         literate development notebook, not required at runtime
+scripts/                small helper scripts
+templates/              public-safe examples for local config
+Makefile                daily command surface after bootstrap
 ```
 
-Each directory has one job:
-
-| Path | Purpose |
-|---|---|
-| `container/` | Docker image and Compose service definition |
-| `dotfiles/dev/` | Files installed into `/home/dev` |
-| `host/` | Host setup sync and systemd integration |
-| `templates/` | Public-safe examples for secrets and machine-local config |
-| `scripts/` | Thin wrappers for common operations |
-
-## What lives where
-
-Durable work and identity live on the host:
-
-```text
-/home/dev/git
-/home/dev/pj
-/home/dev/.ssh
-/home/dev/.gitconfig
-/home/dev/.zshrc
-/home/dev/.oh-my-zsh/custom
-```
-
-Container-only state lives in Docker volumes:
-
-```text
-gh-config      -> /home/dev/.config/gh
-codex-config   -> /home/dev/.codex
-```
-
-Private keys stay on the host. The container uses the host SSH agent.
+`host/sync.py` is the important control-plane file. The scripts and Makefile are thin wrappers around the tested workflow.
 
 ## Quickstart
 
-Clone the repo:
+On a fresh-ish Ubuntu host, clone the repo as the existing admin/user account:
 
-```zsh
+```sh
 git clone https://github.com/1iis/devbox.git
 cd devbox
+chmod +x scripts/setup.sh scripts/dev-in.sh
+./scripts/setup.sh
 ```
 
-On a fresh Ubuntu host, use Python for the first bootstrap step. `make` is installed by `host/sync.py`, so do not assume it exists yet:
+The setup script asks for:
 
-```zsh
+- Git display name;
+- Git email;
+- optional existing SSH signing private key;
+- optional existing SSH auth private key.
+
+If key paths are omitted or do not exist, `host/sync.py` can generate fresh keys for the `dev` user.
+
+After setup completes:
+
+```sh
+sudo -iu dev
+cd ~/.devbox
+./scripts/dev-in.sh
+```
+
+That starts the Compose runtime if needed and enters the container shell.
+
+## Manual bootstrap
+
+The wrapper is intentionally small. The manual equivalent is:
+
+```sh
+git clone https://github.com/1iis/devbox.git
+cd devbox
 python3 -m py_compile host/sync.py
 python3 host/sync.py status --name "Your Name" --email you@example.com
 sudo python3 host/sync.py enable --name "Your Name" --email you@example.com
-```
-
-After that, the normal Makefile workflow is available. Host-state sync/status checks inspect `/home/dev` and system paths, so run them with `sudo` from the admin/installer user:
-
-```zsh
-make check
-sudo make status
-sudo make enable
-```
-
-For the MVP daily workflow, switch to the managed `dev` identity and start/enter the container from that login session. This preserves access to the interactive SSH agent via `SSH_AUTH_SOCK`:
-
-```zsh
 sudo -iu dev
-cd ~/.config/dev-env
-docker compose up -d
-docker compose exec dev zsh
+cd ~/.devbox
+make dcup
+make shell
 ```
 
-`make start` currently controls the systemd service path. That path is useful for validation and future polish, but the preferred MVP work loop is direct Compose from `dev`.
+To import existing keys:
 
-Prepare local config and secrets as needed:
-
-```zsh
-sudo -u dev cp templates/env.zsh.example /home/dev/.oh-my-zsh/custom/env.zsh
-sudo -u dev editor /home/dev/.oh-my-zsh/custom/env.zsh
-sudo -u dev editor /home/dev/.ssh/config
+```sh
+python3 host/sync.py status \
+  --name "Your Name" \
+  --email you@example.com \
+  --ssh-sign-key "$HOME/.ssh/sign" \
+  --ssh-private-key "$HOME/.ssh/dev"
 ```
 
-The sync command creates these files once if missing and will not overwrite local secret/config content afterwards.
-
-## First-run authentication
-
-Some tools authenticate once and persist their state in Docker volumes.
-
-GitHub CLI:
-
-```zsh
-gh auth login
-```
-
-Codex CLI:
-
-```zsh
-codex
-```
-
-After first login, auth state survives container rebuilds.
+Then run the same command with `sudo ... enable`.
 
 ## Daily use
 
-Enter the container:
+From the host `dev` user:
 
-```zsh
-dev
+```sh
+cd ~/.devbox
+make dcup      # start container
+make shell     # enter dev@dev
+make ps        # show service state
+make logs      # follow logs
+make dcdn      # stop container
 ```
 
-Rebuild the container:
+The helper script does the common start-and-enter path:
 
-```zsh
-devub
+```sh
+~/.devbox/scripts/dev-in.sh
 ```
 
-Check status:
+The container is disposable. Your work is not: project files, shell config, Git config, SSH metadata, and history live on the host or in named Docker volumes.
 
-```zsh
-devps
+## Auth and persistence
+
+GitHub CLI state is stored in the `gh-config` Docker volume:
+
+```sh
+gh auth login
 ```
 
-Stop it:
+Codex state is stored in the `codex-config` Docker volume:
 
-```zsh
-devdown
+```sh
+codex
 ```
 
-The container is disposable. Your work is not.
+Both survive container rebuilds and recreation.
 
-## Shell layout
-
-oh-my-zsh loads only top-level `*.zsh` files in `$ZSH_CUSTOM`.
-
-This repo uses that deliberately:
+SSH auth and signing use host-owned key material. Compose forwards the SSH agent socket into the container as `/ssh-agent` and sets:
 
 ```text
-dotfiles/dev/.oh-my-zsh/custom/10-rc.zsh
+SSH_AUTH_SOCK=/ssh-agent
 ```
 
-is host-only `dev` setup.
+This works in the supported beta path because the container is started from an interactive `dev` login session.
 
-```text
-dotfiles/dev/.oh-my-zsh/custom/dev/10-rc.zsh
+## Updating and recovery
+
+From `dev@box`:
+
+```sh
+cd ~/.devbox
+git pull
+make check
+sudo make enable
+make dcup
+make shell
 ```
 
-is container-only setup. Compose mounts it into the container as:
+Rebuild the container when needed:
 
-```text
-/home/dev/.oh-my-zsh/custom/10-rc.zsh
+```sh
+cd ~/.devbox
+make build
+make dcdn
+make dcup
+make shell
 ```
 
-So the host and container can share most files while keeping their startup behavior separate.
+The image and container can be replaced; durable state should remain on the host or in named volumes.
 
-## Secrets
-
-This repo should be safe to publish.
-
-Do not commit:
-
-- private SSH keys
-- API keys
-- `env.zsh`
-- `.codex/`
-- `.config/gh/`
-- `.npm/`
-- `.zsh_history`
-- machine-local caches or logs
+## Local config and templates
 
 Public examples live in `templates/`.
 
-Real secrets live on the machine or in a password manager.
+Local machine config is created once and should not be committed:
+
+- `/home/dev/.oh-my-zsh/custom/env.zsh`
+- `/home/dev/.ssh/config`
+- `/home/dev/.zsh_history`
+- Docker auth/config volumes
+- Codex config
+
+The sync script creates local files if missing and avoids overwriting secret/local state afterwards.
+
+## Validation
+
+Fast local checks:
+
+```sh
+make check
+```
+
+This currently checks:
+
+- Python compile for `host/sync.py`;
+- sync help output;
+- shell script syntax;
+- Docker Compose config parsing.
 
 ## Design principles
 
-- keep it small
-- keep it explicit
-- make rebuilds cheap
-- keep secrets out of images
-- mount durable data in
-- bake container tools into the image
-- let the host own identity
-- let the container own disposable execution
-- prefer boring tools over clever machinery
+- keep it small;
+- keep it boring;
+- make changes reversible;
+- host owns durable state;
+- container is disposable;
+- no private keys in the image;
+- mount data instead of duplicating it;
+- prefer direct standard tools over clever abstraction;
+- excellent daily UX beats theoretical purity.
 
-## Current stack
+## Known limitations
 
-The container currently includes:
+- This is beta software for an opinionated small-team workflow.
+- It is tested primarily on fresh Ubuntu hosts/VMs.
+- Direct Compose from logged-in `dev` is the supported runtime path.
+- Full systemd-managed startup with interactive SSH-agent behavior is deferred.
+- Command names and helper scripts may change before a stable release.
+- There is no packaged `devbox` CLI yet.
+- No container image is published; build locally from this repo.
 
-- Ubuntu 24.04
-- zsh + oh-my-zsh
-- powerlevel10k
-- Git
-- GitHub CLI
-- uv
-- Node.js LTS
-- npm
-- Codex CLI
-- bubblewrap
-- common terminal/dev tools
+## License
 
-See `container/README.md` for container-specific details.
-
-## Status
-
-This repo is intentionally small and practical.
-
-It is built for a tiny team that wants a reliable workstation pattern without adopting a full platform stack.
+MIT. See [`LICENSE`](./LICENSE).
