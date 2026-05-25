@@ -186,6 +186,7 @@ def plan(c: dict, groups: list[str]) -> list[dict]:
         ops += [{"kind": "once", "name": f"create-once {o['dst']}", **o} for o in once]
 
         ops.append({"kind": "ssh_keys", "name": "SSH keys for dev user"})
+        ops.append({"kind": "repo_copy", "name": "copy repo to dev home"})
 
     if "systemd" in groups:
         ops.append({"kind": "unit", "name": f"unit {c['app']}", "path": Path("/etc/systemd/system")/c["app"]})
@@ -220,6 +221,7 @@ def op(o: dict, c: dict, apply: bool) -> dict:
         "svc": ensure_svc,
         "compose": check_compose,
         "ssh_keys": ensure_ssh_keys,
+        "repo_copy": ensure_repo_copy,
     }.get(o.get("kind"))
     if not f:
         return res(o.get("name", "operation"), "error", f"unknown operation kind: {o.get('kind')}")
@@ -452,6 +454,20 @@ def ensure_ssh_keys(o: dict, c: dict, apply: bool) -> dict:
         return res(o["name"])
     state = "changed" if apply else "would_change"
     return res(o["name"], state, ", ".join(generated))
+def ensure_repo_copy(o: dict, c: dict, apply: bool) -> dict:
+    """Copy the repo to ~dev/git/REPO_NAME once after first enable."""
+    src = c["root"]
+    dst = c["home"] / "git" / src.name
+    own = f"{c['dev']}:{c['dev']}"
+    if dst.exists():
+        return res(o["name"])
+    if not apply:
+        return res(o["name"], "would_change", f"copy {src} → {dst}")
+    shutil.copytree(src, dst, symlinks=True, ignore=shutil.ignore_patterns())
+    u, g = ids(own)
+    for p in [dst, *dst.rglob("*")]:
+        os.chown(p, u, g)
+    return res(o["name"], "changed")
 def cmd(xs: list[str], check: bool = False, input: str | None = None) -> subprocess.CompletedProcess:
     """Run a command without shell=True, capturing stdout and stderr."""
     return subprocess.run(xs, input=input, text=True, capture_output=True, check=check)
