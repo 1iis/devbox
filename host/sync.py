@@ -457,7 +457,7 @@ def ensure_ssh_keys(o: dict, c: dict, apply: bool) -> dict:
 def ensure_repo_copy(o: dict, c: dict, apply: bool) -> dict:
     """Copy the repo to ~dev/git/REPO_NAME once after first enable."""
     src = c["root"]
-    dst = c["home"] / "." + src.name
+    dst = c["home"] / str("." + src.name)
     own = f"{c['dev']}:{c['dev']}"
     if dst.exists():
         return res(o["name"])
