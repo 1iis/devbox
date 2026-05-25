@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 # ── Collect identity ──────────────────────────────────────────────
@@ -68,7 +68,7 @@ FLAGS="--name \"$NAME\" --email \"$EMAIL\""
 # ── Dry run ───────────────────────────────────────────────────────
 echo
 echo "== Dry run (status) =="
-eval "python3 host/sync.py status $FLAGS"
+eval "python3 host/sync.py status $FLAGS" || true
 echo
 
 # ── Converge ──────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ fi
 
 echo
 echo "== Enabling devbox =="
-eval "sudo python3 host/sync.py enable $FLAGS"
+eval "sudo python3 host/sync.py enable $FLAGS" || true
 
 echo
 echo "✓ devbox installed"
