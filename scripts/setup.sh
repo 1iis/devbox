@@ -24,12 +24,18 @@ while [ -z "$EMAIL" ]; do
 done
 
 # SSH signing key
-read -r -p "SSH signing private key [$SSH_SIGN_KEY]: " ans
+read -r -p "SSH sign private key [$SSH_SIGN_KEY, Enter to auto-generate if missing]: " ans
 SSH_SIGN_KEY="${ans:-$SSH_SIGN_KEY}"
+[ -f "$SSH_SIGN_KEY" ] || SSH_SIGN_KEY=""
+#read -r -p "SSH signing private key [$SSH_SIGN_KEY]: " ans
+#SSH_SIGN_KEY="${ans:-$SSH_SIGN_KEY}"
 
 # SSH auth private key
-read -r -p "SSH auth private key [$SSH_PRIVATE_KEY]: " ans
+read -r -p "SSH auth private key [$SSH_PRIVATE_KEY, Enter to auto-generate if missing]: " ans
 SSH_PRIVATE_KEY="${ans:-$SSH_PRIVATE_KEY}"
+[ -f "$SSH_PRIVATE_KEY" ] || SSH_PRIVATE_KEY=""
+# read -r -p "SSH auth private key [$SSH_PRIVATE_KEY]: " ans
+# SSH_PRIVATE_KEY="${ans:-$SSH_PRIVATE_KEY}"
 
 echo
 echo "  Name:            $NAME"
