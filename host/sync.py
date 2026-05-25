@@ -1,7 +1,6 @@
 from pathlib import Path
 import argparse, grp, os, pwd, shutil, subprocess, sys, tempfile
 from string import Template
-
 ROOT = Path(__file__).resolve().parents[1]
 DEV = "dev"
 ID = 1111
@@ -14,12 +13,10 @@ PKGS = [
     "docker.io", "docker-compose-v2", "python3", "fzf", "ripgrep", "fd-find",
     "bat", "tree",
 ]
-
 CMDS = [
     "curl", "git", "gh", "make", "zsh", "ssh", "sudo", "docker", "python3",
     "fzf", "rg", "fdfind", "batcat", "tree",
 ]
-
 DIRS = [
     {"path": HOME/"git", "owner": "dev:dev", "mode": 0o755},
     {"path": HOME/"pj", "owner": "dev:dev", "mode": 0o755},
@@ -42,17 +39,14 @@ FILES = [
     {"src": ROOT/"container/docker-compose.yml", "dst": RUN/"docker-compose.yml", "owner": "dev:dev", "mode": 0o644},
     {"src": ROOT/"container/README.md", "dst": RUN/"README.md", "owner": "dev:dev", "mode": 0o644},
 ]
-
 ZSH_FILES = [
     "10-rc.zsh", "aliases.zsh", "dev.zsh", "history.zsh",
     "_docker.zsh", "_git.zsh", "_python.zsh", "i.zsh",
     "dev/10-rc.zsh",
 ]
-
 RENDER = [
     {"src": ROOT/"dotfiles/dev/.gitconfig", "dst": HOME/".gitconfig", "owner": "dev:dev", "mode": 0o644},
 ]
-
 ONCE = [
     {"src": ROOT/"templates/env.zsh.example", "dst": HOME/".oh-my-zsh/custom/env.zsh", "owner": "dev:dev", "mode": 0o600},
     {"src": ROOT/"templates/ssh_config.example", "dst": HOME/".ssh/config", "owner": "dev:dev", "mode": 0o600},
@@ -88,8 +82,8 @@ def cfg(a: argparse.Namespace, env=os.environ) -> dict:
     """Build the effective sync configuration."""
     dev_home = Path(f"/home/{a.dev}")
     gu = git_user(home=dev_home)
-    name = a.name or env.get("NAME") or gu.get("name")
-    email = a.email or env.get("EMAIL") or gu.get("email")
+    name  = a.name  or gu.get("name")  or env.get("NAME")
+    email = a.email or gu.get("email") or env.get("EMAIL")
 
     if not name and sys.stdin.isatty():
         name = input("Name for Git config: ").strip() or None
@@ -132,8 +126,6 @@ def cfg(a: argparse.Namespace, env=os.environ) -> dict:
         "ssh_private_key": ssh_private_key,
         "generate_ssh_keys": ssh_generate,
     }
-
-
 def git_user(home: Path | None = None) -> dict:
     """Return Git user.name/user.email from global or explicit home config."""
     r = {}
@@ -209,8 +201,6 @@ def plan(c: dict, groups: list[str]) -> list[dict]:
 def res(name: str, state: str = "ok", detail: str = "") -> dict:
     """Return a standard operation result dictionary."""
     return {"name": name, "state": state, "detail": detail}
-
-
 def chg(apply: bool) -> str:
     """Return the mutation state appropriate for apply/dry-run mode."""
     return "changed" if apply else "would_change"
@@ -251,8 +241,6 @@ def ensure_pkgs(o: dict, c: dict, apply: bool) -> dict:
     if not apply:
         return res(o["name"], "would_change", "install: " + " ".join(miss))
     return apt_install(miss)
-
-
 def ensure_cmd(o: dict, c: dict, apply: bool) -> dict:
     """Ensure a command is available on PATH."""
     return res(o["name"]) if need(o["cmd"]) else res(o["name"], "warn", "missing from PATH")
@@ -273,8 +261,6 @@ def ensure_group(o: dict, c: dict, apply: bool) -> dict:
     if not apply: return res(o["name"], "would_change", f"groupadd --gid {want} {name}")
     cp = cmd(["groupadd", "--gid", str(want), name])
     return res(o["name"], "changed" if cp.returncode == 0 else "error", cp.stderr.strip())
-
-
 def ensure_user(o: dict, c: dict, apply: bool) -> dict:
     """Ensure the dev user exists with desired UID, group, home, shell, and memberships."""
     name, want = o["user"], o["uid"]
@@ -383,8 +369,6 @@ def ensure_unit(o: dict, c: dict, apply: bool) -> dict:
     cp = cmd(["systemctl", "daemon-reload"])
     if cp.returncode != 0: return res(o["name"], "error", cp.stderr.strip())
     return res(o["name"], "changed", "daemon-reload")
-
-
 def ensure_svc(o: dict, c: dict, apply: bool) -> dict:
     """Ensure requested systemd service action/state."""
     svc, state = o["svc"], o["state"]
@@ -477,16 +461,12 @@ def need(x: str) -> bool:
 def uid(name: str) -> int:
     """Return the UID for a user name."""
     return pwd.getpwnam(name).pw_uid
-
-
 def gid(name: str) -> int:
     """Return the GID for a group name."""
     return grp.getgrnam(name).gr_gid
 def read(p: Path) -> bytes | None:
     """Read bytes from p, returning None when p does not exist."""
     return p.read_bytes() if p.exists() else None
-
-
 def write(p: Path, b: bytes, mode: int = 0o644, owner: str | None = None) -> None:
     """Atomically write bytes to p, then set mode and optional owner."""
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -508,8 +488,6 @@ def ids(spec: str) -> tuple[int, int]:
     """Parse 'user:group' into numeric uid/gid."""
     u, _, g = spec.partition(":")
     return uid(u), gid(g or u)
-
-
 def same_meta(p: Path, owner: str, mode: int) -> bool:
     """Return True when p has the desired owner/group and permission mode."""
     if not p.exists(): return False
@@ -523,8 +501,6 @@ def apt_missing(pkgs: list[str]) -> list[str]:
         if cp.returncode != 0 or "install ok installed" not in cp.stdout:
             miss.append(p)
     return miss
-
-
 def apt_install(pkgs: list[str]) -> dict:
     """Install missing apt packages and return a result dictionary."""
     if not pkgs: return res("apt packages")
