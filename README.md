@@ -1,13 +1,13 @@
+# devbox
+
 > [!WARNING]
-> **`devbox` is beta workstation infrastructure.** It modifies host users, files, packages, Docker configuration, systemd units, and shell/Git setup.
+> **`devbox` is beta workstation infrastructure.** It modifies host users, files, packages, Docker configuration, shell setup, Git setup, and optional systemd unit files.
 >
 > It is currently intended for our own small-team Ubuntu workstation workflow. Review the code first and test on a disposable VM or VPS before using it on an important machine.
 
-# devbox
+`devbox` is a small, opinionated SWE workstation setup for an Ubuntu host and a disposable Docker container, with one `dev` work identity shared across both.
 
-A small, opinionated SWE workstation setup for an Ubuntu host and a disposable Docker container, with one `dev` work identity shared across both.
-
-`devbox` is not a general platform. It is a practical workstation pattern:
+It is not a general platform. It is a practical workstation pattern:
 
 - the host owns durable state, secrets, users, filesystems, SSH agent access, and Docker;
 - the container is a rebuildable execution/tooling layer;
@@ -15,13 +15,13 @@ A small, opinionated SWE workstation setup for an Ubuntu host and a disposable D
 - work files live on the host and are bind-mounted into the container;
 - shell config, Git config, aliases, history, and daily tooling are kept close enough that `dev@box` and `dev@dev` feel like one working environment.
 
-The point is a small, good workstation: boring, explicit, rebuildable, and pleasant to use.
+The goal is a small, good workstation: boring, explicit, rebuildable, and pleasant to use.
 
 ## Status
 
-Current release target: `v0.1.0-beta`.
+Current release: [**`v0.1.0-beta`**][release].
 
-Supported beta workflow:
+Supported beta/MVP workflow:
 
 ```text
 admin user clones repo and bootstraps host
@@ -30,13 +30,18 @@ admin user clones repo and bootstraps host
   -> dev works in either dev@box or dev@dev
 ```
 
-Direct Compose from an interactive `dev` login is the supported beta runtime path. The systemd unit can be installed/enabled by the sync script, but fully systemd-managed container startup with interactive SSH-agent semantics is deferred.
+The supported runtime path is **direct Docker Compose from an interactive `dev` login**.
+
+The sync script can install and enable a systemd unit, but fully systemd-managed container startup with stable interactive SSH-agent semantics is deferred.
 
 ## What you get
 
 - dedicated host work user: `dev`
 - matching container user: `dev`
-- shared work directories: `/home/dev/git` and `/home/dev/pj`
+- shared UID/GID: `1111` by default
+- shared work directories:
+  - `/home/dev/git`
+  - `/home/dev/pj`
 - Zsh, Oh My Zsh, Powerlevel10k, aliases, and history setup
 - Git and GitHub CLI configuration
 - SSH authentication/signing through host-owned key material and agent forwarding
@@ -53,15 +58,20 @@ Private keys are not baked into the image and should not be copied into the cont
 container/              Dockerfile, Compose file, container docs
 dotfiles/dev/           files installed into /home/dev
 host/sync.py            host convergence engine
-host/sync.ipynb         literate development notebook, not required at runtime
+host/sync.ipynb         literate development notebook/source
 scripts/                small helper scripts
 templates/              public-safe examples for local config
 Makefile                daily command surface after bootstrap
 ```
 
-`host/sync.py` is the important control-plane file. The scripts and Makefile are thin wrappers around the tested workflow.
+**`host/sync.py`** is the important control-plane file. The scripts and Makefile are thin wrappers around the tested workflow. 
+
+> [!TIP]
+> See [**`host/sync.ipynb`**][sync-nb] at [Solveit][solveit] for the literate programming source.
 
 ## Quickstart
+
+This is the supported beta/MVP bootstrap path.
 
 On a fresh-ish Ubuntu host, clone the repo as the existing admin/user account:
 
@@ -91,23 +101,55 @@ cd ~/.devbox
 
 That starts the Compose runtime if needed and enters the container shell.
 
+## Daily use
+
+From the host `dev` user:
+
+```sh
+cd ~/.devbox
+./scripts/dev-in.sh
+```
+
+That is the normal “start and enter devbox” path.
+
+The equivalent Makefile commands are:
+
+```sh
+cd ~/.devbox
+make dcup      # start container
+make shell     # enter dev@dev
+make ps        # show service state
+make logs      # follow logs
+make dcdn      # stop container
+```
+
+The container is disposable. Your work is not: project files, shell config, Git config, SSH metadata, history, and selected tool state live on the host or in named Docker volumes.
+
 ## Manual bootstrap
 
-The wrapper is intentionally small. The manual equivalent is:
+The wrapper is intentionally small. The manual equivalent is useful when debugging `scripts/setup.sh` or developing `devbox` itself.
 
 ```sh
 git clone https://github.com/1iis/devbox.git
 cd devbox
+
 python3 -m py_compile host/sync.py
-python3 host/sync.py status --name "Your Name" --email you@example.com
-sudo python3 host/sync.py enable --name "Your Name" --email you@example.com
+
+python3 host/sync.py status \
+  --name "Your Name" \
+  --email you@example.com
+
+sudo python3 host/sync.py enable \
+  --name "Your Name" \
+  --email you@example.com
+
 sudo -iu dev
 cd ~/.devbox
 make dcup
 make shell
 ```
 
-To import existing keys:
+To import existing keys during bootstrap:
 
 ```sh
 python3 host/sync.py status \
@@ -119,36 +161,17 @@ python3 host/sync.py status \
 
 Then run the same command with `sudo ... enable`.
 
-## Daily use
-
-From the host `dev` user:
-
-```sh
-cd ~/.devbox
-make dcup      # start container
-make shell     # enter dev@dev
-make ps        # show service state
-make logs      # follow logs
-make dcdn      # stop container
-```
-
-The helper script does the common start-and-enter path:
-
-```sh
-~/.devbox/scripts/dev-in.sh
-```
-
-The container is disposable. Your work is not: project files, shell config, Git config, SSH metadata, and history live on the host or in named Docker volumes.
+The key paths are bootstrap inputs. They are not part of the daily shell environment.
 
 ## Auth and persistence
 
-GitHub CLI state is stored in the `gh-config` Docker volume:
+GitHub CLI state is stored in the `gh-config` Docker named volume:
 
 ```sh
 gh auth login
 ```
 
-Codex state is stored in the `codex-config` Docker volume:
+Codex state is stored in the `codex-config` Docker named volume:
 
 ```sh
 codex
@@ -156,52 +179,59 @@ codex
 
 Both survive container rebuilds and recreation.
 
-SSH auth and signing use host-owned key material. Compose forwards the SSH agent socket into the container as `/ssh-agent` and sets:
+SSH auth and signing use host-owned key material. The container receives:
+
+- the forwarded SSH agent socket;
+- SSH config;
+- known hosts;
+- the public signing key.
+
+Private keys should remain on the host.
+
+## Local environment
+
+`devbox` creates a local shell environment file if it is missing:
 
 ```text
-SSH_AUTH_SOCK=/ssh-agent
+/home/dev/.oh-my-zsh/custom/env.zsh
 ```
 
-This works in the supported beta path because the container is started from an interactive `dev` login session.
+This file is create-once local state. `host/sync.py` creates it from `templates/env.zsh.example` if needed and does not overwrite existing content.
 
-## Updating and recovery
+Use it for local shell environment variables or tool tokens if needed.
 
-From `dev@box`:
+Do not use it as bootstrap configuration. Bootstrap inputs such as name, email, and SSH key paths should be passed to `scripts/setup.sh` or `host/sync.py`.
+
+Do not commit real secrets.
+
+## Runtime model
+
+The supported beta/MVP runtime path is direct Docker Compose from an interactive `dev` login:
 
 ```sh
 cd ~/.devbox
-git pull
-make check
-sudo make enable
 make dcup
 make shell
 ```
 
-Rebuild the container when needed:
+The installed Compose runtime files live at:
 
-```sh
-cd ~/.devbox
-make build
-make dcdn
-make dcup
-make shell
+```text
+/home/dev/.config/dev-env
 ```
 
-The image and container can be replaced; durable state should remain on the host or in named volumes.
+The active host-side repo/config copy lives at:
 
-## Local config and templates
+```text
+/home/dev/.devbox
+```
 
-Public examples live in `templates/`.
+That directory is deliberately not bind-mounted into the container. Normal work should happen under bind-mounted work directories such as:
 
-Local machine config is created once and should not be committed:
-
-- `/home/dev/.oh-my-zsh/custom/env.zsh`
-- `/home/dev/.ssh/config`
-- `/home/dev/.zsh_history`
-- Docker auth/config volumes
-- Codex config
-
-The sync script creates local files if missing and avoids overwriting secret/local state afterwards.
+```text
+/home/dev/git
+/home/dev/pj
+```
 
 ## Validation
 
@@ -213,33 +243,55 @@ make check
 
 This currently checks:
 
-- Python compile for `host/sync.py`;
-- sync help output;
-- shell script syntax;
+- Python compilation for `host/sync.py`;
+- `host/sync.py --help`;
+- shell syntax for scripts;
 - Docker Compose config parsing.
+
+For fresh-host confidence, test on a disposable Ubuntu VM or VPS and run the full bootstrap path.
+
+## Known caveats
+
+- `devbox` is currently opinionated around Ubuntu hosts.
+- The normal work user is always `dev`.
+- UID/GID default to `1111`.
+- Direct Docker Compose from an interactive `dev` login is the supported runtime path.
+- The systemd unit can be installed/enabled, but full systemd-managed runtime with reliable interactive SSH-agent semantics is deferred.
+- `host/sync.ipynb` is tracked as literate source/development context; `host/sync.py` is the runtime artifact.
+- `devbox` is not a multi-user framework. Each installation gets its own `dev` identity.
+- No container image is published yet.
+
+## Not currently in scope
+
+These may happen later, but are not part of the current MVP path:
+
+- packaged `devbox` CLI;
+- PyPI/`uvx` installation;
+- published container images;
+- generalized multi-user support;
+- cloud-init-first workflow;
+- full systemd-managed runtime;
+- broad platform support beyond the current Ubuntu workflow.
 
 ## Design principles
 
-- keep it small;
-- keep it boring;
-- make changes reversible;
-- host owns durable state;
-- container is disposable;
-- no private keys in the image;
-- mount data instead of duplicating it;
-- prefer direct standard tools over clever abstraction;
-- excellent daily UX beats theoretical purity.
-
-## Known limitations
-
-- This is beta software for an opinionated small-team workflow.
-- It is tested primarily on fresh Ubuntu hosts/VMs.
-- Direct Compose from logged-in `dev` is the supported runtime path.
-- Full systemd-managed startup with interactive SSH-agent behavior is deferred.
-- Command names and helper scripts may change before a stable release.
-- There is no packaged `devbox` CLI yet.
-- No container image is published; build locally from this repo.
+- boring over clever
+- explicit over magical
+- host owns durable state
+- container is disposable
+- private keys stay out of the container
+- local config is create-once where appropriate
+- managed files are exact and reproducible
+- daily workflow should be short and memorable
 
 ## License
 
 MIT. See [`LICENSE`](./LICENSE).
+
+
+
+
+[release]: https://github.com/1iis/devbox/releases/tag/v0.1.0-beta
+[sync-nb]: https://share.solveit.pub/d/d401e609a25292612f9f08d934965996
+[solveit]: https://solve.it.com/
+
