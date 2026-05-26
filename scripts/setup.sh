@@ -3,25 +3,20 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# Helpers
+say() { printf '%s\n' "$@" >&2; }
 
-# ── Collect identity ──────────────────────────────────────────────
+# Collect identity
 NAME="${NAME:-}"
 EMAIL="${EMAIL:-}"
 SSH_SIGN_KEY="${SSH_SIGN_KEY:-$HOME/.ssh/sign}"
 SSH_PRIVATE_KEY="${SSH_PRIVATE_KEY:-$HOME/.ssh/dev}"
 
-echo "== devbox setup =="
-echo
+say "== devbox setup =="
+say
 
-# NAME
-while [ -z "$NAME" ]; do
-  read -r -p "Name for Git config: " NAME
-done
-
-# EMAIL
-while [ -z "$EMAIL" ]; do
-  read -r -p "Email for Git config: " EMAIL
-done
+while [ -z "$NAME" ];  do read -r -p "Name for Git config: "  NAME;  done
+while [ -z "$EMAIL" ]; do read -r -p "Email for Git config: " EMAIL; done
 
 # SSH signing key
 read -r -p "SSH sign private key [$SSH_SIGN_KEY, Enter to auto-generate if missing]: " ans
@@ -33,50 +28,49 @@ read -r -p "SSH auth private key [$SSH_PRIVATE_KEY, Enter to auto-generate if mi
 SSH_PRIVATE_KEY="${ans:-$SSH_PRIVATE_KEY}"
 [ -f "$SSH_PRIVATE_KEY" ] || SSH_PRIVATE_KEY=""
 
-echo
-echo "  Name:            $NAME"
-echo "  Email:           $EMAIL"
-echo "  SSH sign key:    $SSH_SIGN_KEY"
-echo "  SSH auth key:    $SSH_PRIVATE_KEY"
-echo
+say
+say "  Name:            $NAME"
+say "  Email:           $EMAIL"
+say "  SSH sign key:    $SSH_SIGN_KEY"
+say "  SSH auth key:    $SSH_PRIVATE_KEY"
+say
 
-# ── Compile sync.py ───────────────────────────────────────────────
-python3 -m py_compile host/sync.py
-echo "✓ host/sync.py compiles"
+# Compile sync.py
+python3 -m py_compile host/sync.py && say "✓ host/sync.py compiles"
 
-# ── Install make if missing ───────────────────────────────────────
+# Install make if missing
 # if ! command -v make &>/dev/null; then
-#   echo "  installing make…"
+#   say "  installing make…"
 #   sudo apt-get update -qq && sudo apt-get install -y -qq make
-#   echo "✓ make installed"
+#   say "✓ make installed"
 # fi
 
-# ── Prepare flags ─────────────────────────────────────────────────
+# Prepare flags
 FLAGS=(--name "$NAME" --email "$EMAIL")
 [ -n "$SSH_SIGN_KEY" ]    && FLAGS+=(--ssh-sign-key "$SSH_SIGN_KEY")
 [ -n "$SSH_PRIVATE_KEY" ] && FLAGS+=(--ssh-private-key "$SSH_PRIVATE_KEY")
 
-# ── Dry run ───────────────────────────────────────────────────────
-echo
-echo "== Dry run (status) =="
+# Dry run
+say
+say "== Dry run (status) =="
 python3 host/sync.py status "${FLAGS[@]}" || true
-echo
+say
 
-# ── Converge ──────────────────────────────────────────────────────
+# Converge
 read -r -p "Converge host now? [y/N] " confirm
 if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
-  echo "Aborted."
+  say "Aborted."
   exit 1
 fi
 
-echo
-echo "== Enabling devbox =="
+say
+say "== Enabling devbox =="
 sudo python3 host/sync.py enable "${FLAGS[@]}" || true
 
-echo
-echo "✓ devbox installed"
-echo
-echo "Next:"
-echo "  sudo -iu dev"
-echo "  cd ~/.devbox"
-echo "  ./scripts/dev-in.sh"
+say
+say "✓ devbox installed"
+say
+say "Next:"
+say "  sudo -iu dev"
+say "  cd ~/.devbox"
+say "  ./scripts/dev-in.sh"
