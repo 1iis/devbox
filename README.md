@@ -292,6 +292,6 @@ MIT. See [`LICENSE`](./LICENSE).
 
 
 [release]: https://github.com/1iis/devbox/releases/tag/v0.1.0-beta
-[sync-nb]: https://share.solveit.pub/d/d401e609a25292612f9f08d934965996
+[sync-nb]: https://share.solveit.pub/d/105311392cff6157618c3f412afb3c96
 [solveit]: https://solve.it.com/
 
