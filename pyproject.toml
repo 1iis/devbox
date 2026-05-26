@@ -1,6 +1,6 @@
 [project]
 name = "devbox"
-version = "0.1.0-beta"
+version = "0.2.0-beta"
 description = "A small reproducible SWE workstation setup for a host machine and disposable Docker container."
 readme = "README.md"
 requires-python = ">=3.11"
