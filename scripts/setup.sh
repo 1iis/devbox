@@ -44,17 +44,6 @@ echo "  SSH sign key:    $SSH_SIGN_KEY"
 echo "  SSH auth key:    $SSH_PRIVATE_KEY"
 echo
 
-# ── Write env.zsh ─────────────────────────────────────────────────
-ENV_DST="dotfiles/dev/.oh-my-zsh/custom/env.zsh"
-mkdir -p "$(dirname "$ENV_DST")"
-sed \
-  -e "s|\$NAME|$NAME|g" \
-  -e "s|\$EMAIL|$EMAIL|g" \
-  -e "s|\$SSH_SIGN_KEY|${SSH_SIGN_KEY}|g" \
-  -e "s|\$SSH_PRIVATE_KEY|${SSH_PRIVATE_KEY}|g" \
-  templates/env.zsh.example > "$ENV_DST"
-echo "✓ env.zsh written"
-
 # ── Compile sync.py ───────────────────────────────────────────────
 python3 -m py_compile host/sync.py
 echo "✓ host/sync.py compiles"
@@ -93,3 +82,4 @@ echo "✓ devbox installed"
 echo
 echo "Next: sudo -iu dev"
 echo "Then: cd ~/.devbox && ./scripts/dev-in.sh"
+echo "Local env hook: /home/dev/.oh-my-zsh/custom/env.zsh"
