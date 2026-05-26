@@ -45,11 +45,11 @@ python3 -m py_compile host/sync.py
 echo "✓ host/sync.py compiles"
 
 # ── Install make if missing ───────────────────────────────────────
-if ! command -v make &>/dev/null; then
-  echo "  installing make…"
-  sudo apt-get update -qq && sudo apt-get install -y -qq make
-  echo "✓ make installed"
-fi
+# if ! command -v make &>/dev/null; then
+#   echo "  installing make…"
+#   sudo apt-get update -qq && sudo apt-get install -y -qq make
+#   echo "✓ make installed"
+# fi
 
 # ── Prepare flags ─────────────────────────────────────────────────
 FLAGS=(--name "$NAME" --email "$EMAIL")
