@@ -19,7 +19,7 @@ The goal is a small, good workstation: boring, explicit, rebuildable, and pleasa
 
 ## Status
 
-Current release: [**`v0.1.0-beta`**][release].
+Current release: [**`v0.2.0-beta`**][release].
 
 Supported beta/MVP workflow:
 
@@ -291,7 +291,7 @@ MIT. See [`LICENSE`](./LICENSE).
 
 
 
-[release]: https://github.com/1iis/devbox/releases/tag/v0.1.0-beta
+[release]: https://github.com/1iis/devbox/releases/tag/v0.2.0-beta
 [sync-nb]: https://share.solveit.pub/d/105311392cff6157618c3f412afb3c96
 [solveit]: https://solve.it.com/
 
