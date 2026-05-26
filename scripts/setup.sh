@@ -27,15 +27,11 @@ done
 read -r -p "SSH sign private key [$SSH_SIGN_KEY, Enter to auto-generate if missing]: " ans
 SSH_SIGN_KEY="${ans:-$SSH_SIGN_KEY}"
 [ -f "$SSH_SIGN_KEY" ] || SSH_SIGN_KEY=""
-#read -r -p "SSH signing private key [$SSH_SIGN_KEY]: " ans
-#SSH_SIGN_KEY="${ans:-$SSH_SIGN_KEY}"
 
 # SSH auth private key
 read -r -p "SSH auth private key [$SSH_PRIVATE_KEY, Enter to auto-generate if missing]: " ans
 SSH_PRIVATE_KEY="${ans:-$SSH_PRIVATE_KEY}"
 [ -f "$SSH_PRIVATE_KEY" ] || SSH_PRIVATE_KEY=""
-# read -r -p "SSH auth private key [$SSH_PRIVATE_KEY]: " ans
-# SSH_PRIVATE_KEY="${ans:-$SSH_PRIVATE_KEY}"
 
 echo
 echo "  Name:            $NAME"
@@ -56,14 +52,14 @@ if ! command -v make &>/dev/null; then
 fi
 
 # ── Prepare flags ─────────────────────────────────────────────────
-FLAGS="--name \"$NAME\" --email \"$EMAIL\""
-[ -n "$SSH_SIGN_KEY" ]    && FLAGS="$FLAGS --ssh-sign-key \"$SSH_SIGN_KEY\""
-[ -n "$SSH_PRIVATE_KEY" ] && FLAGS="$FLAGS --ssh-private-key \"$SSH_PRIVATE_KEY\""
+FLAGS=(--name "$NAME" --email "$EMAIL")
+[ -n "$SSH_SIGN_KEY" ]    && FLAGS+=(--ssh-sign-key "$SSH_SIGN_KEY")
+[ -n "$SSH_PRIVATE_KEY" ] && FLAGS+=(--ssh-private-key "$SSH_PRIVATE_KEY")
 
 # ── Dry run ───────────────────────────────────────────────────────
 echo
 echo "== Dry run (status) =="
-eval "python3 host/sync.py status $FLAGS" || true
+python3 host/sync.py status "${FLAGS[@]}" || true
 echo
 
 # ── Converge ──────────────────────────────────────────────────────
@@ -75,11 +71,12 @@ fi
 
 echo
 echo "== Enabling devbox =="
-eval "sudo python3 host/sync.py enable $FLAGS" || true
+sudo python3 host/sync.py enable "${FLAGS[@]}" || true
 
 echo
 echo "✓ devbox installed"
 echo
-echo "Next: sudo -iu dev"
-echo "Then: cd ~/.devbox && ./scripts/dev-in.sh"
-echo "Local env hook: /home/dev/.oh-my-zsh/custom/env.zsh"
+echo "Next:"
+echo "  sudo -iu dev"
+echo "  cd ~/.devbox"
+echo "  ./scripts/dev-in.sh"

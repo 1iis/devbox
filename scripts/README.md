@@ -26,7 +26,7 @@ Then:
 ```sh
 sudo -iu dev
 cd ~/.devbox
-scripts/dev-in.sh
+./scripts/dev-in.sh
 ```
 
 The manual equivalent is:
@@ -89,7 +89,7 @@ chmod +x scripts/setup.sh
 ./scripts/setup.sh
 ```
 
-Depending on the exact version, it may call `sudo` internally for the parts that need root privileges, or it may be run with `sudo`. The important idea is that it automates the same sequence that can be performed manually.
+Run `setup.sh` as the installer/admin user, not with sudo. It calls `sudo` for the steps that need root privileges. The important idea is that it automates the same sequence that can be performed manually.
 
 ### What `setup.sh` does
 
@@ -99,8 +99,6 @@ At a high level:
 admin user
     ↓
 collect identity and key paths
-    ↓
-write dev env file
     ↓
 compile sync.py
     ↓
@@ -130,10 +128,8 @@ cd "$ROOT"
 
 This matters because all following paths are repo-relative:
 
-- `host/sync.py`;
-- `templates/env.zsh.example`;
-- `dotfiles/dev/.oh-my-zsh/custom/env.zsh`;
-- `Makefile`.
+- `host/sync.py`
+- `Makefile`
 
 The script should not depend on the caller’s current directory once it has started.
 
@@ -216,43 +212,7 @@ python3 host/sync.py status \
   --ssh-private-key /home/onei/.ssh/dev
 ```
 
-#### 4. Write `env.zsh``env.zsh`
-
-The script creates the local environment file for the future `dev` shell:
-
-```text
-dotfiles/dev/.oh-my-zsh/custom/env.zsh
-```
-
-from the example/template file.
-
-This file is intentionally not a generic public config file. It is local machine state. It may contain personal paths, email addresses, API keys, and other environment variables.
-
-The important values are:
-
-```sh
-export NAME="..."
-export EMAIL="..."
-export SSH_SIGN_KEY="..."
-export SSH_PRIVATE_KEY="..."
-```
-
-Manual equivalent:
-
-```sh
-cp templates/env.zsh.example dotfiles/dev/.oh-my-zsh/custom/env.zsh
-nano dotfiles/dev/.oh-my-zsh/custom/env.zsh
-```
-
-This is useful because `enable` later copies this file into:
-
-```text
-/home/dev/.oh-my-zsh/custom/env.zsh
-```
-
-as a create-once local file.
-
-#### 5. Compile `host/sync.py``host/sync.py`
+#### 4. Compile `host/sync.py`
 
 Before mutating the host, the script checks that the Python file at least compiles:
 
@@ -268,7 +228,7 @@ It is not a full test. It merely answers:
 
 That is still valuable on a fresh host because it catches broken exports or accidental edits before any privileged setup happens.
 
-#### 6. Ensure `make` exists`make` exists
+#### 5. Ensure `make` exists`make` exists
 
 A fresh Ubuntu host may not have `make`.
 
@@ -283,7 +243,7 @@ This is a convenience only. `host/sync.py enable` also manages packages and shou
 
 Installing it early simply lets the rest of the flow use Makefile targets sooner.
 
-#### 7. Run status
+#### 6. Run status
 
 The script runs a dry-run first:
 
@@ -317,7 +277,7 @@ enable = inspect + mutate + report
 
 The same operation plan is used in both cases; only `apply` changes.
 
-#### 8. Ask for confirmation
+#### 7. Ask for confirmation
 
 After showing the dry-run, the script asks whether to continue.
 
@@ -325,7 +285,7 @@ This is intentionally boring and explicit. The next step will create users, inst
 
 A good setup script should pause before doing that.
 
-#### 9. Run enable
+#### 8. Run enable
 
 If confirmed, the script runs:
 
@@ -361,7 +321,7 @@ The exact tree may evolve, but the conceptual split should remain:
 ~/.oh-my-zsh/custom    shell fragments and local env
 ```
 
-#### 10. Hand off to `dev``dev`
+#### 9. Hand off to `dev``dev`
 
 At the end, the script should not pretend that installation is the same thing as daily use.
 
@@ -421,6 +381,24 @@ make shell
 to a guided, repeatable flow.
 
 That makes it valuable for testing and dogfooding even if a future CLI eventually replaces it.
+
+#### Local env file
+
+`setup.sh` does not write a repo-local `env.zsh`.
+
+During `enable`, `host/sync.py` creates this file if missing:
+
+```text
+/home/dev/.oh-my-zsh/custom/env.zsh
+```
+
+from:
+
+```text
+templates/env.zsh.example
+```
+
+It is create-once local shell state and is not overwritten afterward.
 
 ---
 
